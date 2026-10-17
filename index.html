@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>후~ 케이크 · 롤링페이퍼 레터링 케이크</title>
+<meta name="description" content="레터링 문구와 토핑으로 직접 꾸미는 3D 생일 케이크. 친구들이 롤링페이퍼를 숨기고, 폰 마이크에 후~ 불면 촛불이 꺼지며 쪽지가 열려요.">
+<meta name="theme-color" content="#0B0820">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&family=Gothic+A1:wght@500;700;800&display=swap">
+<style>
+:root { --sub: rgba(255,255,255,.72); --glass: rgba(255,255,255,.09); --edge: rgba(255,255,255,.32); }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #0B0820; color: #fff; font-family: 'Gothic A1', -apple-system, system-ui, sans-serif; }
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+[hidden] { display: none !important; }
+button, input, textarea { font: inherit; color: inherit; }
+
+/* 리퀴드 글래스: 흐림 + 채도 + 가장자리 빛 + 위쪽 반사 */
+.glass { position: relative; background: var(--glass); backdrop-filter: blur(18px) saturate(1.8); -webkit-backdrop-filter: blur(18px) saturate(1.8); border-radius: 28px; box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(255,255,255,.12), inset 0 0 0 1px var(--edge), 0 18px 40px rgba(0,0,0,.35); overflow: hidden; }
+.glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(160deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,0) 38%, rgba(255,255,255,0) 70%, rgba(255,255,255,.12) 100%); pointer-events: none; }
+
+.top { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 20px); transform: translateX(-50%); width: min(88vw, 380px); padding: 14px 20px 16px; text-align: center; }
+.kicker { font-size: 12px; font-weight: 800; letter-spacing: .28em; color: #FFD8A8; }
+.title { margin: 6px 0 0; font-family: 'Jua', sans-serif; font-weight: 400; font-size: 28px; line-height: 1.25; word-break: keep-all; }
+.hint { margin: 6px 0 0; font-size: 13px; color: var(--sub); }
+.count { display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: rgba(255,255,255,.14); }
+
+.dock { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 20px); transform: translateX(-50%); width: min(92vw, 400px); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; gap: 10px; align-items: center; }
+.field { flex: 1; min-width: 0; border: 0; border-radius: 18px; padding: 14px 16px; background: rgba(255,255,255,.1); box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); font-size: 16px; outline: none; resize: none; }
+.field::placeholder { color: rgba(255,255,255,.5); }
+.field.age { flex: 0 0 90px; text-align: center; }
+.field.letter { font-family: 'Jua', sans-serif; font-size: 18px; text-align: center; line-height: 1.35; padding: 10px 14px; }
+.pill { position: relative; height: 52px; flex: 1; border: 0; border-radius: 999px; font-size: 16px; font-weight: 800; cursor: pointer; background: rgba(255,255,255,.14); box-shadow: inset 0 1px 0 rgba(255,255,255,.6), inset 0 0 0 1px rgba(255,255,255,.3); transition: transform .15s; white-space: nowrap; }
+.pill.main { background: linear-gradient(135deg, rgba(255,170,110,.85), rgba(255,95,150,.85)); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 10px 30px rgba(255,110,140,.4); }
+.pill.mini { flex: 0 0 auto; padding: 0 16px; }
+.pill:active { transform: scale(.97); }
+.chips { display: flex; gap: 8px; justify-content: center; }
+.chip { width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer; box-shadow: inset 0 0 0 2px rgba(255,255,255,.35); }
+.chip[aria-pressed=true] { box-shadow: 0 0 0 3px #fff, 0 0 14px rgba(255,255,255,.6); }
+.parts { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -14px; padding: 2px 14px; }
+.parts::-webkit-scrollbar { display: none; }
+.part { flex: none; width: 54px; height: 54px; border: 0; border-radius: 18px; font-size: 26px; cursor: pointer; background: rgba(255,255,255,.1); box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+.part[aria-pressed=true] { background: rgba(255,255,255,.3); box-shadow: inset 0 0 0 2px #fff, 0 0 16px rgba(255,255,255,.45); }
+.small { border: 0; background: none; color: var(--sub); font-size: 13px; padding: 4px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.meter { height: 6px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #8FD3FF, #FFD8A8); border-radius: 99px; transition: width .08s; }
+
+.sheet { position: fixed; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(8,5,25,.35); }
+.card { width: min(90vw, 360px); padding: 22px 20px 18px; display: flex; flex-direction: column; gap: 12px; }
+.card h2 { margin: 0; font-family: 'Jua', sans-serif; font-weight: 400; font-size: 22px; }
+.note-read { font-family: 'Gowun Dodum', sans-serif; font-size: 20px; line-height: 1.6; white-space: pre-wrap; word-break: keep-all; min-height: 80px; }
+.from { font-family: 'Jua', sans-serif; font-size: 18px; text-align: right; opacity: .9; }
+.toast { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%); padding: 12px 18px; font-size: 14px; font-weight: 700; opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap; }
+.toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<section class="glass top">
+  <div class="kicker">HAPPY BIRTHDAY</div>
+  <h1 class="title" id="title">누구의 생일이야?</h1>
+  <p class="hint" id="hint">이름·나이를 넣고 케이크를 꾸며 봐</p>
+  <span class="count" id="count" hidden></span>
+</section>
+
+<section class="glass dock" id="setup">
+  <div class="row">
+    <input class="field" id="nm" maxlength="8" placeholder="생일인 친구 이름" aria-label="생일인 친구 이름">
+    <input class="field age" id="ag" inputmode="numeric" maxlength="2" placeholder="나이" aria-label="나이">
+  </div>
+  <div class="chips" id="flavors" role="group" aria-label="케이크 색"></div>
+  <button class="pill main" id="next">✨ 케이크 꾸미러 가기</button>
+</section>
+
+<section class="glass dock" id="deco" hidden>
+  <textarea class="field letter" id="letter" rows="2" maxlength="30" aria-label="레터링 문구"></textarea>
+  <div class="chips" id="inks" role="group" aria-label="글씨 색"></div>
+  <div class="parts" id="parts" role="group" aria-label="토핑 고르기"></div>
+  <div class="row"><button class="pill mini" id="undo" aria-label="되돌리기">↩️</button><button class="pill main" id="finish">🕯️ 완성! 촛불 켜기</button></div>
+</section>
+
+<section class="glass dock" id="play" hidden>
+  <div class="meter" aria-hidden="true"><i id="lvl"></i></div>
+  <div class="row"><button class="pill" id="write">✍️ 롤링페이퍼 쓰기</button><button class="pill main" id="mic">🎤 후~ 불기</button></div>
+  <div class="row" style="justify-content:space-between">
+    <button class="small" id="tap">마이크가 안 되면 여기를 꾹</button>
+    <button class="small" id="pass">🔗 다음 친구에게 넘기기</button>
+  </div>
+</section>
+
+<section class="glass dock" id="done" hidden>
+  <button class="pill main" id="pass2">🔗 이 케이크 보내기</button>
+  <div class="row"><button class="pill" id="relight">🕯️ 다시 켜기</button><button class="pill" id="mine">🎂 나도 만들기</button></div>
+</section>
+
+<div class="sheet" id="writeSheet" hidden>
+  <div class="glass card">
+    <h2>✍️ 롤링페이퍼 숨기기</h2>
+    <textarea class="field" id="msg" rows="4" maxlength="80" placeholder="생일 축하 한마디 (80자)&#10;촛불을 끄면 열려요 🤫" aria-label="축하 메시지"></textarea>
+    <div class="row"><input class="field" id="from" maxlength="8" placeholder="보내는 사람" aria-label="보내는 사람"></div>
+    <div class="chips" id="papers" role="group" aria-label="쪽지 색"></div>
+    <div class="row"><button class="pill" id="wNo">취소</button><button class="pill main" id="wOk">케이크에 쏙</button></div>
+  </div>
+</div>
+<div class="sheet" id="readSheet" hidden>
+  <div class="glass card">
+    <div class="note-read" id="rText"></div>
+    <div class="from" id="rFrom"></div>
+    <button class="pill" id="rClose">닫기</button>
+  </div>
+</div>
+<div class="glass toast" id="toast" role="status"></div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+
+const $ = (id) => document.getElementById(id);
+const CAPTURE = new URLSearchParams(location.search).has('capture'); // 영상 녹화용: window.__step으로 한 프레임씩
+if (CAPTURE && new URLSearchParams(location.search).has('clean')) document.head.insertAdjacentHTML('beforeend', '<style>.top,.dock,.toast{visibility:hidden!important}</style>'); // 3D만 찍기
+let seed = 7;
+const rnd = CAPTURE ? () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; } : Math.random;
+
+const FLAVORS = { pink: '#FFC9DA', mint: '#C3EEDB', lavender: '#DCCBFF', butter: '#FFE6A3' };
+const INKS = ['#F0628F', '#8A68EE', '#23A97E', '#E8962E', '#5A4470'];
+const PAPERS = ['#FFF4B8', '#FFD6E5', '#D3F2FF', '#E2FFD6', '#EBDDFF'];
+const MAX_PARTS = 24;
+
+// ---------- 상태 (링크 하나에 다 담김) ----------
+const S = { mode: 'setup', name: '', age: 0, flavor: 'pink', ink: INKS[0], letter: '', parts: [], notes: [], sel: 'cherry', paper: 0,
+  blow: 0, forced: 0, allOut: false, revealed: false, time: 0, intro: 0, lighting: -1 };
+const enc = (o) => btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(o)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const dec = (s) => JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0))));
+const josa = (n) => (/[가-힣]$/.test(n) && (n.charCodeAt(n.length - 1) - 0xAC00) % 28 ? '아' : '야');
+const r2 = (v) => Math.round(v * 100) / 100;
+const defaultLetter = () => `${S.name}${josa(S.name)}\n생일 축하해 ♡`;
+function saveHash() {
+  history.replaceState(null, '', '#d=' + enc({ n: S.name, a: S.age, f: S.flavor, i: S.ink, l: S.letter, p: S.parts.map((p) => [p.t, r2(p.x), r2(p.z)]), m: S.notes.map((x) => [x.from, x.text, x.c]) }));
+}
+
+// ---------- 렌더러·장면 ----------
+const renderer = new THREE.WebGLRenderer({ canvas: $('c'), antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, CAPTURE ? 3 : 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.95;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = (() => {
+  const c = document.createElement('canvas'); c.width = 2; c.height = 512;
+  const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 512);
+  gr.addColorStop(0, '#2B1752'); gr.addColorStop(0.55, '#140C33'); gr.addColorStop(1, '#08061C');
+  g.fillStyle = gr; g.fillRect(0, 0, 2, 512);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+scene.fog = new THREE.Fog(0x0B0820, 14, 30);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.5;
+
+const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.95, 0);
+controls.enableDamping = true; controls.enablePan = false;
+controls.minDistance = 5; controls.maxDistance = 13;
+controls.minPolarAngle = 0.3; controls.maxPolarAngle = 1.4;
+controls.autoRotate = true; controls.autoRotateSpeed = 0.5;
+
+scene.add(new THREE.HemisphereLight(0xC9B8FF, 0x1A0F33, 0.7));
+const key = new THREE.DirectionalLight(0xFFE8D2, 1.1);
+key.position.set(3, 8, 6); key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.radius = 6;
+Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4 });
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x9F8BFF, 1.1); rim.position.set(-5, 3, -6); scene.add(rim);
+const glow = new THREE.PointLight(0xFFB066, 0, 8, 1.6); glow.position.set(0, 2.6, -0.3); scene.add(glow);
+
+// ---------- 텍스처 ----------
+function radial(stops) {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  stops.forEach(([p, col]) => gr.addColorStop(p, col)); g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const TEX_FLAME = radial([[0, 'rgba(255,255,255,1)'], [0.3, 'rgba(255,214,140,.9)'], [0.6, 'rgba(255,140,60,.3)'], [1, 'rgba(255,90,30,0)']]);
+const TEX_SOFT = radial([[0, 'rgba(255,255,255,1)'], [0.4, 'rgba(255,255,255,.45)'], [1, 'rgba(255,255,255,0)']]);
+const TEX_SMOKE = radial([[0, 'rgba(225,220,240,.8)'], [0.5, 'rgba(195,190,215,.35)'], [1, 'rgba(160,155,190,0)']]);
+const stripes = (() => {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 256; const g = c.getContext('2d');
+  g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, 64, 256);
+  g.fillStyle = '#FFB3CB'; for (let y = -64; y < 320; y += 40) { g.beginPath(); g.moveTo(0, y); g.lineTo(64, y + 28); g.lineTo(64, y + 44); g.lineTo(0, y + 16); g.fill(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+function roundRect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+
+// ---------- 무대 ----------
+const shadowy = (m) => { m.traverse((o) => { if (o.isMesh) o.castShadow = o.receiveShadow = true; }); return m; };
+const floor = new THREE.Mesh(new THREE.CircleGeometry(9, 64), new THREE.MeshStandardMaterial({ color: 0x1E1444, roughness: 0.85 }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = -0.42; floor.receiveShadow = true; scene.add(floor);
+const glassMat = new THREE.MeshPhysicalMaterial({ color: 0xF6F0FF, roughness: 0.04, transmission: 0.9, thickness: 0.5, ior: 1.45, clearcoat: 1, attenuationColor: new THREE.Color(0xE4D8FF), attenuationDistance: 2.5 });
+const plate = shadowy(new THREE.Mesh(new THREE.CylinderGeometry(2.05, 1.95, 0.12, 96), glassMat)); plate.position.y = 0.06; scene.add(plate);
+const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.7, 0.42, 64), glassMat); stand.position.y = -0.21; scene.add(stand);
+
+// ---------- 레터링 케이크 몸통 ----------
+const cake = new THREE.Group(); scene.add(cake);
+const R = 1.5, H = 1.05, B = 0.2, Y0 = 0.12, TOP = Y0 + H; // 반지름, 높이, 둥근 모서리, 바닥 높이, 윗면 높이
+const cream = new THREE.MeshPhysicalMaterial({ color: 0xFFFBF5, roughness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.3, sheen: 0.6, sheenColor: new THREE.Color(0xFFFFFF) });
+const bodyMat = new THREE.MeshPhysicalMaterial({ roughness: 0.5, sheen: 1, sheenColor: new THREE.Color(0xFFFFFF), sheenRoughness: 0.45 });
+const letterMat = new THREE.MeshStandardMaterial({ transparent: true, roughness: 0.4, polygonOffset: true, polygonOffsetFactor: -2 });
+const letterCanvas = document.createElement('canvas'); letterCanvas.width = letterCanvas.height = 1024;
+const letterTex = new THREE.CanvasTexture(letterCanvas); letterTex.colorSpace = THREE.SRGBColorSpace; letterTex.anisotropy = 8; letterMat.map = letterTex;
+let topDisk;
+{
+  const pts = [new THREE.Vector2(0, 0), new THREE.Vector2(R - 0.06, 0), new THREE.Vector2(R, 0.06), new THREE.Vector2(R, H - B)];
+  for (let i = 1; i <= 10; i++) { const a = (i / 10) * Math.PI / 2; pts.push(new THREE.Vector2(R - B + Math.cos(a) * B, H - B + Math.sin(a) * B)); }
+  pts.push(new THREE.Vector2(0, H));
+  const body = shadowy(new THREE.Mesh(new THREE.LatheGeometry(pts, 128), bodyMat)); body.position.y = Y0; cake.add(body);
+  topDisk = new THREE.Mesh(new THREE.CircleGeometry(R - B - 0.02, 96), letterMat); topDisk.rotation.x = -Math.PI / 2; topDisk.position.y = TOP + 0.004; cake.add(topDisk);
+  const shell = new THREE.SphereGeometry(1, 20, 14);
+  const ring = (r, y, n, s) => { for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, m = shadowy(new THREE.Mesh(shell, cream)); m.scale.set(s * 0.75, s * 0.62, s * 1.15); m.position.set(Math.cos(a) * r, y, Math.sin(a) * r); m.rotation.y = -a; cake.add(m); } };
+  ring(R - B * 0.55, TOP - 0.02, 34, 0.13);
+  ring(R + 0.02, Y0 + 0.06, 40, 0.12);
+  const pearl = new THREE.MeshPhysicalMaterial({ color: 0xFFFFFF, roughness: 0.15, metalness: 0.2, clearcoat: 1, iridescence: 1, iridescenceIOR: 1.6 });
+  for (let i = 0; i < 26; i++) { const a = (i / 26) * Math.PI * 2, p = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 10), pearl); p.position.set(Math.cos(a) * (R + 0.012), Y0 + H * 0.55 + Math.sin(a * 3) * 0.12, Math.sin(a) * (R + 0.012)); cake.add(p); }
+}
+async function drawLettering() {
+  await document.fonts.load('140px Jua');
+  const g = letterCanvas.getContext('2d'); g.clearRect(0, 0, 1024, 1024);
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = S.ink;
+  const lines = (S.letter || defaultLetter()).split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 3);
+  let size = lines.length > 2 ? 120 : 150;
+  g.font = `${size}px Jua`;
+  while (size > 60 && Math.max(...lines.map((l) => g.measureText(l).width)) > 720) { size -= 6; g.font = `${size}px Jua`; }
+  const lh = size * 1.22, y0 = 610 - ((lines.length - 1) * lh) / 2; // 숫자 초가 뒤쪽에 있어서 앞(아래)으로
+  lines.forEach((l, i) => g.fillText(l, 512, y0 + i * lh));
+  letterTex.needsUpdate = true;
+}
+function paintCake() { bodyMat.color.set(FLAVORS[S.flavor]); drawLettering(); }
+
+// ---------- 토핑 파츠 (원점 = 케이크 윗면에 닿는 바닥) ----------
+const gloss = (c, o = {}) => new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.15, ...o });
+const extrude = (shape, depth, mat) => { const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.02, bevelSegments: 4, curveSegments: 18 }); g.center(); return new THREE.Mesh(g, mat); };
+const PARTS = {
+  cherry: { icon: '🍒', make() {
+    const g = new THREE.Group(), b = new THREE.Mesh(new THREE.SphereGeometry(0.15, 24, 18), gloss(0xE5193B, { roughness: 0.15 })); b.position.y = 0.14;
+    const st = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.012, 6, 16, Math.PI * 0.5), new THREE.MeshStandardMaterial({ color: 0x5B8C3A, roughness: 0.6 })); st.position.set(-0.12, 0.26, 0); st.rotation.z = 0.4;
+    g.add(b, st); return g; } },
+  strawberry: { icon: '🍓', make() {
+    const g = new THREE.Group();
+    const pts = [[0, 0.36], [0.06, 0.33], [0.13, 0.22], [0.16, 0.1], [0.13, 0.02], [0, 0]].map(([x, y]) => new THREE.Vector2(x, y));
+    const b = new THREE.Mesh(new THREE.LatheGeometry(pts, 32), gloss(0xF0304F, { roughness: 0.22 })); g.add(b);
+    const leaf = new THREE.MeshStandardMaterial({ color: 0x4FAE4A, roughness: 0.5 });
+    for (let i = 0; i < 5; i++) { const l = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.14, 8), leaf), a = (i / 5) * Math.PI * 2; l.position.set(Math.cos(a) * 0.1, 0.03, Math.sin(a) * 0.1); l.rotation.set(Math.sin(a) * 1.2, 0, -Math.cos(a) * 1.2); g.add(l); }
+    for (let i = 0; i < 14; i++) { const s = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 4), gloss(0xFFE08A)), a = i * 2.4, y = 0.06 + (i % 5) * 0.05, rr = 0.15 - Math.abs(y - 0.12) * 0.55; s.position.set(Math.cos(a) * rr, y, Math.sin(a) * rr); g.add(s); }
+    return g; } },
+  heart: { icon: '💗', make() {
+    const s = new THREE.Shape(); s.moveTo(0, -0.14); s.bezierCurveTo(-0.03, -0.08, -0.2, -0.02, -0.2, 0.08); s.bezierCurveTo(-0.2, 0.19, -0.07, 0.22, 0, 0.12); s.bezierCurveTo(0.07, 0.22, 0.2, 0.19, 0.2, 0.08); s.bezierCurveTo(0.2, -0.02, 0.03, -0.08, 0, -0.14);
+    const m = extrude(s, 0.06, gloss(0xFF6FA0)); m.position.y = 0.19; m.rotation.x = -0.35; const g = new THREE.Group(); g.add(m); return g; } },
+  star: { icon: '⭐', make() {
+    const s = new THREE.Shape(); for (let i = 0; i <= 10; i++) { const a = (i / 10) * Math.PI * 2 + Math.PI / 2, r = i % 2 ? 0.08 : 0.19; i ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+    const m = extrude(s, 0.05, gloss(0xFFC94A, { metalness: 0.65, roughness: 0.25 })); m.position.y = 0.2; m.rotation.x = -0.3; const g = new THREE.Group(); g.add(m); return g; } },
+  ribbon: { icon: '🎀', make() {
+    const g = new THREE.Group(), mat = gloss(0xFF8FB8, { roughness: 0.4, sheen: 1, sheenColor: new THREE.Color(0xFFFFFF) });
+    [-1, 1].forEach((d) => { const l = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.035, 12, 24), mat); l.scale.set(1.25, 0.8, 0.6); l.position.set(d * 0.1, 0.16, 0); l.rotation.z = d * 0.25; g.add(l);
+      const t = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.02), mat); t.position.set(d * 0.05, 0.05, 0.02); t.rotation.z = d * 0.4; g.add(t); });
+    const k = new THREE.Mesh(new THREE.SphereGeometry(0.045, 16, 12), mat); k.position.y = 0.16; g.add(k); return g; } },
+  bear: { icon: '🧸', make() {
+    const g = new THREE.Group(), cookie = new THREE.MeshStandardMaterial({ color: 0xC98B55, roughness: 0.75 }), dark = new THREE.MeshStandardMaterial({ color: 0x2A1A14, roughness: 0.4 });
+    const face = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.06, 32), cookie); face.rotation.x = Math.PI / 2; g.add(face);
+    [-1, 1].forEach((d) => { const e = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.06, 20), cookie); e.rotation.x = Math.PI / 2; e.position.set(d * 0.12, 0.13, 0); g.add(e);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), dark); eye.position.set(d * 0.055, 0.03, 0.035); g.add(eye);
+      const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 8), new THREE.MeshStandardMaterial({ color: 0xFF9AB0 })); cheek.scale.z = 0.3; cheek.position.set(d * 0.09, -0.02, 0.032); g.add(cheek); });
+    const muz = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12), new THREE.MeshStandardMaterial({ color: 0xF3D2A8, roughness: 0.7 })); muz.scale.z = 0.45; muz.position.set(0, -0.04, 0.03); g.add(muz);
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.016, 10, 8), dark); nose.position.set(0, -0.025, 0.05); g.add(nose);
+    g.position.y = 0.19; g.rotation.x = -0.3; const w = new THREE.Group(); w.add(g); return w; } },
+  macaron: { icon: '🍪', make() {
+    const g = new THREE.Group(), shell = gloss(0xBDE6FF, { roughness: 0.55, clearcoat: 0.3 });
+    [0.07, 0.19].forEach((y) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.13, 28, 16), shell); m.scale.y = 0.42; m.position.y = y; g.add(m); });
+    const f = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.05, 28), cream); f.position.y = 0.13; g.add(f); return g; } },
+  pearls: { icon: '🫧', make() {
+    const g = new THREE.Group(), m = new THREE.MeshPhysicalMaterial({ color: 0xFFFFFF, roughness: 0.12, metalness: 0.2, clearcoat: 1, iridescence: 1, iridescenceIOR: 1.6 });
+    [[0, 0], [0.09, 0.03], [-0.05, 0.08]].forEach(([x, z], i) => { const p = new THREE.Mesh(new THREE.SphereGeometry(0.05 - i * 0.008, 16, 12), m); p.position.set(x, 0.05 - i * 0.008, z); g.add(p); });
+    return g; } },
+};
+const deco = new THREE.Group(); cake.add(deco);
+function addPart(p, pop = true) {
+  const m = shadowy(PARTS[p.t].make());
+  m.position.set(p.x, TOP, p.z); // 곰돌이·하트·별처럼 납작한 건 앞(레터링 읽는 방향)을 보게 그대로 둠
+  m.userData = { born: pop ? S.time : -9 }; deco.add(m);
+}
+function rebuildParts() { deco.clear(); S.parts.forEach((p) => addPart(p, false)); }
+
+// ---------- 촛불: 숫자 초 + 가는 초 ----------
+const fontP = new Promise((ok) => new FontLoader().load('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/fonts/helvetiker_bold.typeface.json', ok));
+const numMat = new THREE.MeshPhysicalMaterial({ color: 0xFFFFFF, roughness: 0.25, clearcoat: 1, iridescence: 0.6, sheen: 1, sheenColor: new THREE.Color(0xFFD1E1) });
+const slimGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.42, 16), slimMat = new THREE.MeshStandardMaterial({ map: stripes, roughness: 0.4 });
+const wickGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.06, 6), wickMat = new THREE.MeshBasicMaterial({ color: 0x2A2222 });
+let candles = [];
+function flameAt(parent, y, big) {
+  const mk = (col) => new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX_FLAME, color: col, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, transparent: true }));
+  const outer = mk(new THREE.Color(2.2, 1.35, 0.6)), core = mk(new THREE.Color(2.6, 2.3, 1.9));
+  const wick = new THREE.Mesh(wickGeo, wickMat); wick.position.y = y; parent.add(wick, outer, core);
+  outer.scale.set(0, 0, 1); core.scale.set(0, 0, 1);
+  return { outer, core, y: y + 0.13, big };
+}
+async function makeCandles() {
+  candles.forEach((c) => cake.remove(c.g)); candles = [];
+  const font = await fontP, digits = String(Math.max(1, Math.min(99, S.age))).split('');
+  digits.forEach((d, i) => {
+    const g = new THREE.Group();
+    const geo = new TextGeometry(d, { font, size: 0.62, depth: 0.16, curveSegments: 10, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.03, bevelSegments: 4 });
+    geo.computeBoundingBox(); const bb = geo.boundingBox; geo.translate(-(bb.max.x + bb.min.x) / 2, 0, -(bb.max.z + bb.min.z) / 2);
+    g.add(shadowy(new THREE.Mesh(geo, numMat)));
+    g.position.set((i - (digits.length - 1) / 2) * 0.52, TOP, -0.88); g.rotation.x = -0.08;
+    const f = flameAt(g, bb.max.y + 0.03, true); cake.add(g);
+    candles.push({ g, ...f, lit: 0, life: 1, phase: rnd() * 10, out: false, speed: 0.5 + rnd() * 0.6 });
+  });
+  for (let i = 0; i < 6; i++) {
+    const a = Math.PI * (1.15 + (i / 5) * 0.7), g = new THREE.Group();
+    g.position.set(Math.cos(a) * 1.05, TOP, Math.sin(a) * 1.05);
+    const body = shadowy(new THREE.Mesh(slimGeo, slimMat)); body.position.y = 0.21; g.add(body);
+    const f = flameAt(g, 0.45, false); cake.add(g);
+    candles.push({ g, ...f, lit: 0, life: 1, phase: rnd() * 10, out: false, speed: 0.6 + rnd() * 1.0 });
+  }
+}
+
+// ---------- 롤링페이퍼 쪽지 ----------
+const notes3d = [];
+function noteTexture(n) {
+  const c = document.createElement('canvas'); c.width = 320; c.height = 380; const g = c.getContext('2d');
+  g.shadowColor = 'rgba(0,0,0,.25)'; g.shadowBlur = 14; g.shadowOffsetY = 6;
+  roundRect(g, 18, 26, 284, 330, 26); g.fillStyle = n.c; g.fill(); g.shadowColor = 'transparent';
+  g.fillStyle = 'rgba(255,255,255,.55)'; g.save(); g.translate(160, 30); g.rotate(-0.06); g.fillRect(-52, -16, 104, 32); g.restore();
+  g.fillStyle = '#4A3B5C'; g.textAlign = 'left'; g.textBaseline = 'top'; g.font = '30px "Gowun Dodum"';
+  const lines = []; let cur = '';
+  for (const ch of n.text) { if (ch === '\n' || g.measureText(cur + ch).width > 236) { lines.push(cur); cur = ch === '\n' ? '' : ch; } else cur += ch; }
+  lines.push(cur);
+  lines.slice(0, 6).forEach((l, i) => g.fillText(i === 5 && lines.length > 6 ? l.slice(0, -1) + '…' : l, 42, 74 + i * 42));
+  g.textAlign = 'right'; g.font = '30px Jua'; g.fillStyle = '#7A5C8F'; g.fillText(`from. ${n.from}`, 278, 312);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+const noteGeo = new THREE.PlaneGeometry(0.95, 1.13);
+async function addNote3d(n, fly) {
+  await document.fonts.load('30px Jua'); await document.fonts.load('30px "Gowun Dodum"');
+  const m = new THREE.Mesh(noteGeo, new THREE.MeshStandardMaterial({ map: noteTexture(n), transparent: true, side: THREE.DoubleSide, roughness: 0.8 }));
+  const i = notes3d.length;
+  // 쪽지는 케이크 속에 숨어 있다가 촛불을 다 끄면 튀어나옴 (fly = 지금 막 쓴 쪽지가 케이크로 쏙 들어가는 연출)
+  m.userData = { n, a: i * 2.39996 + 0.9, y: 1.0 + (i % 3) * 0.75 + rnd() * 0.15, r: 2.45 + (i % 2) * 0.3, born: fly ? S.time : -9, wob: rnd() * 6, pop: S.revealed ? S.time : null };
+  m.visible = fly || S.revealed;
+  notes3d.push(m); scene.add(m);
+}
+function clearNotes() { notes3d.forEach((m) => { scene.remove(m); m.material.map.dispose(); m.material.dispose(); }); notes3d.length = 0; }
+
+// ---------- 연기·색종이·빛망울 ----------
+const smokes = [];
+function puff(pos) {
+  for (let i = 0; i < 9; i++) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX_SMOKE, transparent: true, depthWrite: false, opacity: 0 }));
+    s.position.copy(pos); scene.add(s); smokes.push({ s, t: -i * 0.07, vx: (rnd() - 0.5) * 0.12, drift: rnd() * 6 });
+  }
+}
+const CONF = 600, conf = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.11, 0.18), new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.4, metalness: 0.3 }), CONF);
+conf.visible = false; scene.add(conf);
+const cp = [], co = new THREE.Object3D(), confPal = [0xFFD166, 0xFF8FB8, 0x8FDDFB, 0xC5A8FF, 0xFFFFFF, 0xA8F0B8];
+for (let i = 0; i < CONF; i++) { cp.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), r: new THREE.Euler(), w: new THREE.Vector3() }); conf.setColorAt(i, new THREE.Color(confPal[i % confPal.length])); }
+function burst() {
+  conf.visible = true;
+  cp.forEach((c) => {
+    c.p.set((rnd() - 0.5) * 0.4, 2.2, (rnd() - 0.5) * 0.4);
+    const a = rnd() * Math.PI * 2, sp = 1.5 + rnd() * 3;
+    c.v.set(Math.cos(a) * sp, 6 + rnd() * 5, Math.sin(a) * sp);
+    c.r.set(rnd() * 6, rnd() * 6, rnd() * 6); c.w.set(rnd() * 10 - 5, rnd() * 10 - 5, rnd() * 10 - 5);
+  });
+}
+const bokeh = (() => {
+  const N = 150, pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const a = rnd() * Math.PI * 2, r = 3.5 + rnd() * 7;
+    pos.set([Math.cos(a) * r, rnd() * 7 - 0.5, Math.sin(a) * r], i * 3);
+    const c = new THREE.Color().setHSL(0.08 + rnd() * 0.75, 0.7, 0.7); col.set([c.r * 1.2, c.g * 1.2, c.b * 1.2], i * 3);
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const p = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.2, map: TEX_SOFT, vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+  scene.add(p); return p;
+})();
+
+// ---------- 후처리: 불꽃만 은은하게 ----------
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.45, 0.3, 1.2);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); composer.setSize(w, h); bloom.setSize(w, h);
+  camera.aspect = w / h; camera.fov = w / h < 0.7 ? 42 : 34; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+// ---------- 화면 흐름: setup → deco(꾸미기) → play(촛불·쪽지) → done ----------
+const FROM = new THREE.Vector3(0, 5.2, 13.5), TO = new THREE.Vector3(0, 3.5, 9.2), DECO = new THREE.Vector3(0, 7.6, 7.4);
+const LOOK = new THREE.Vector3(0, 0.95, 0), LOOK_DECO = new THREE.Vector3(0, 0.55, 1.25); // 꾸미기 땐 케이크 앞쪽을 봐서 케이크가 화면 위로 올라감(아래 패널에 안 가리게)
+camera.position.copy(FROM);
+let camGoal = null, lookGoal = null; // 꾸미기 들어갈 때·나올 때 카메라를 부드럽게 옮김
+function show(id) { S.mode = id; for (const k of ['setup', 'deco', 'play', 'done']) $(k).hidden = k !== id; }
+function setTitle() {
+  $('title').textContent = `${S.name}${josa(S.name)}, 생일 축하해!`;
+  $('count').hidden = false; $('count').textContent = `💌 케이크 속 롤링페이퍼 ${S.notes.length}장`;
+}
+function goDeco() {
+  show('deco'); camGoal = DECO; lookGoal = LOOK_DECO; controls.autoRotate = false;
+  if (!S.letter) S.letter = defaultLetter();
+  $('letter').value = S.letter; paintCake();
+  $('title').textContent = '✨ 케이크 꾸미기'; $('hint').textContent = '토핑을 고르고 케이크 윗면을 톡!';
+}
+async function openCake() {
+  paintCake(); setTitle(); camGoal = TO; lookGoal = LOOK;
+  S.revealed = false; notes3d.forEach((m) => { m.visible = false; m.userData.pop = null; m.userData.born = -9; });
+  $('hint').textContent = S.notes.length ? '촛불을 후~ 끄면 쪽지가 열려요 🤫' : '친구들한테 넘겨서 롤링페이퍼를 모아 봐!';
+  await makeCandles(); S.lighting = 0; S.allOut = false; conf.visible = false;
+  show('play');
+}
+function renderChips(box, list, cur, set) {
+  box.innerHTML = list.map(([k, col]) => `<button class="chip" data-k="${k}" style="background:${col}" aria-pressed="${k === cur}" aria-label="${k}"></button>`).join('');
+  box.onclick = (e) => { const b = e.target.closest('[data-k]'); if (!b) return; set(b.dataset.k); box.querySelectorAll('.chip').forEach((x) => x.setAttribute('aria-pressed', x === b)); };
+}
+renderChips($('flavors'), Object.entries(FLAVORS), S.flavor, (k) => { S.flavor = k; paintCake(); });
+renderChips($('inks'), INKS.map((c) => [c, c]), S.ink, (k) => { S.ink = k; drawLettering(); });
+renderChips($('papers'), PAPERS.map((c, i) => [String(i), c]), '0', (k) => { S.paper = +k; });
+$('parts').innerHTML = Object.entries(PARTS).map(([k, p]) => `<button class="part" data-p="${k}" aria-pressed="${k === S.sel}" aria-label="${k}">${p.icon}</button>`).join('');
+$('parts').onclick = (e) => { const b = e.target.closest('[data-p]'); if (!b) return; S.sel = b.dataset.p; $('parts').querySelectorAll('.part').forEach((x) => x.setAttribute('aria-pressed', x === b)); };
+function placePart(x, z) {
+  if (S.parts.length >= MAX_PARTS) return toast(`토핑은 ${MAX_PARTS}개까지!`);
+  const r = Math.hypot(x, z), lim = R - B - 0.08; if (r > lim) { x *= lim / r; z *= lim / r; }
+  const p = { t: S.sel, x, z }; S.parts.push(p); addPart(p, true);
+}
+
+// ---------- 마이크 ----------
+let analyser, buf;
+async function startMic() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    const ac = new AudioContext(); analyser = ac.createAnalyser(); analyser.fftSize = 1024; buf = new Float32Array(analyser.fftSize);
+    ac.createMediaStreamSource(stream).connect(analyser);
+    $('mic').textContent = '💨 지금 후~!';
+  } catch { toast('마이크를 못 켰어요. 아래 글씨를 꾹 눌러도 돼요'); }
+}
+function micLevel() {
+  if (!analyser) return 0;
+  analyser.getFloatTimeDomainData(buf);
+  let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+  return Math.sqrt(s / buf.length);
+}
+
+// ---------- 한 프레임 ----------
+const tmp = new THREE.Vector3(), hole = new THREE.Vector3(0, TOP + 0.2, 0);
+function step(dt) {
+  S.time += dt; const t = S.time;
+  if (S.intro < 1) { S.intro = Math.min(1, S.intro + dt / 2.4); camera.position.lerpVectors(FROM, TO, 1 - (1 - S.intro) ** 3); }
+  else if (camGoal) { camera.position.lerp(camGoal, Math.min(1, dt * 3)); if (camera.position.distanceTo(camGoal) < 0.02) camGoal = null; }
+  if (lookGoal) { controls.target.lerp(lookGoal, Math.min(1, dt * 3)); if (controls.target.distanceTo(lookGoal) < 0.01) lookGoal = null; }
+  controls.autoRotate = S.mode !== 'deco';
+  controls.autoRotateSpeed = S.allOut ? 1.4 : 0.5;
+  controls.update(dt);
+
+  // 토핑이 톡 붙는 통통 효과
+  for (const m of deco.children) { const k = Math.min(1, (t - m.userData.born) / 0.35) - 1; m.scale.setScalar(Math.max(0.01, 1 + 2.7 * k ** 3 + 1.7 * k * k)); } // 살짝 커졌다 제자리
+
+  if (S.lighting >= 0) {
+    S.lighting += dt;
+    candles.forEach((c, i) => { if (S.lighting > i * 0.18 && c.lit === 0) c.lit = 0.001; });
+    if (candles.every((c) => c.lit > 0)) S.lighting = -1;
+  }
+  const want = Math.max(Math.min(1, Math.max(0, micLevel() - 0.06) * 6), S.forced);
+  S.blow += (want - S.blow) * Math.min(1, dt * 10);
+  $('lvl').style.width = `${S.blow * 100}%`;
+
+  let lit = 0;
+  for (const c of candles) {
+    if (c.lit > 0 && c.lit < 1) c.lit = Math.min(1, c.lit + dt * 4);
+    if (!c.out && c.lit > 0 && S.blow > 0.35) {
+      c.life -= dt * S.blow * c.speed;
+      if (c.life <= 0) { c.out = true; c.outer.getWorldPosition(tmp); puff(tmp); }
+    }
+    const on = c.out ? 0 : c.lit, k = c.big ? 1.25 : 1;
+    const flick = 1 + Math.sin(t * 17 + c.phase) * 0.06 + Math.sin(t * 31 + c.phase * 2) * 0.04;
+    const lean = S.blow * 0.1 * (c.out ? 0 : 1), sq = 1 - S.blow * 0.35;
+    c.outer.position.set(lean, c.y, 0); c.outer.scale.set(0.15 * k * on * flick, 0.26 * k * on * flick * sq, 1);
+    c.core.position.set(lean * 0.7, c.y - 0.03, 0); c.core.scale.set(0.05 * k * on, 0.1 * k * on * sq, 1);
+    if (!c.out && c.lit > 0) lit++;
+  }
+  glow.intensity = (lit / Math.max(1, candles.length)) * 2.6 * (1 + Math.sin(t * 13) * 0.05);
+  if (candles.length && !S.allOut && candles.every((c) => c.out)) {
+    S.allOut = true; S.revealed = true; burst();
+    notes3d.forEach((m, i) => { m.userData.pop = t + 0.5 + i * 0.22; });
+    $('hint').textContent = S.notes.length ? `💌 롤링페이퍼 ${S.notes.length}장이 도착했어! 눌러서 읽어 봐` : '🎉 소원 빌었지? 생일 축하해!';
+    setTimeout(() => show('done'), CAPTURE ? 0 : 900);
+  }
+
+  // 쪽지: 쓰면 카메라 앞 → 케이크 속으로 쏙, 촛불이 다 꺼지면 케이크에서 하나씩 튀어나와 둥실
+  for (const m of notes3d) {
+    const u = m.userData, a = u.a + t * 0.12;
+    tmp.set(Math.cos(a) * u.r, u.y + Math.sin(t * 1.3 + u.wob) * 0.08, Math.sin(a) * u.r);
+    if (u.pop != null) {
+      const k = Math.min(1, Math.max(0, t - u.pop) / 1.2), e = 1 - (1 - k) ** 3;
+      m.visible = t >= u.pop;
+      const arc = hole.clone().lerp(tmp, e); arc.y += Math.sin(Math.PI * e) * 1.2;
+      m.position.copy(arc); m.scale.setScalar(Math.max(0.01, e * (k < 1 ? 1 + Math.sin(Math.PI * k) * 0.25 : 1)));
+    } else {
+      const age = t - u.born;
+      if (age < 1.2) {
+        const e = 1 - (1 - Math.max(0, age) / 1.2) ** 2;
+        m.position.lerpVectors(camera.position.clone().lerp(controls.target, 0.35), hole, e); m.scale.setScalar(Math.max(0.01, 1.4 * (1 - e * e)));
+      } else m.visible = false;
+    }
+    m.lookAt(camera.position); m.rotateZ(Math.sin(t * 0.9 + u.wob) * 0.08 + (u.pop == null ? (t - u.born) * 4 : 0));
+  }
+
+  for (let i = smokes.length - 1; i >= 0; i--) {
+    const m = smokes[i]; m.t += dt; if (m.t < 0) continue;
+    const k = m.t / 2.2;
+    m.s.position.y += dt * (0.55 - k * 0.2); m.s.position.x += Math.sin(m.t * 3 + m.drift) * dt * 0.08 + m.vx * dt;
+    const sc = 0.07 + k * 0.38; m.s.scale.set(sc * 0.7, sc, 1); m.s.material.opacity = Math.min(1, m.t * 4) * Math.max(0, 1 - k) * 0.55;
+    if (k >= 1) { scene.remove(m.s); m.s.material.dispose(); smokes.splice(i, 1); }
+  }
+  if (conf.visible) {
+    cp.forEach((c, i) => {
+      c.v.y -= 9.8 * dt * 0.45; c.v.multiplyScalar(1 - dt * 1.6); c.p.x += Math.sin(t * 2 + i) * dt * 0.25;
+      c.p.addScaledVector(c.v, dt);
+      if (c.p.y < -0.38) { c.p.y = -0.38; c.v.set(0, 0, 0); c.w.multiplyScalar(0.9); }
+      c.r.x += c.w.x * dt; c.r.y += c.w.y * dt; c.r.z += c.w.z * dt;
+      co.position.copy(c.p); co.rotation.copy(c.r); co.updateMatrix(); conf.setMatrixAt(i, co.matrix);
+    });
+    conf.instanceMatrix.needsUpdate = true;
+  }
+  bokeh.rotation.y = t * 0.03;
+  composer.render(dt);
+}
+
+// ---------- 버튼 ----------
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2200); }
+async function pass() {
+  saveHash();
+  const url = location.href;
+  const text = S.notes.length ? `${S.name} 생일 롤링페이퍼 💌 ${S.notes.length}장 모였어! 너도 한 장 숨기고 다음 사람한테 넘겨 줘` : `${S.name} 생일 케이크 🎂 롤링페이퍼 한 장 숨겨 줘!`;
+  try { if (navigator.share) { await navigator.share({ title: '후~ 케이크', text, url }); return; } } catch (e) { if (e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(`${text} ${url}`); toast('링크 복사 완료! 카톡에 붙여넣기 💌'); } catch { toast('공유가 안 되는 브라우저예요'); }
+}
+$('next').onclick = () => {
+  S.name = $('nm').value.trim() || '친구'; S.age = Math.max(1, Math.min(99, parseInt($('ag').value, 10) || 1));
+  S.notes = []; S.letter = ''; clearNotes(); goDeco();
+};
+$('letter').addEventListener('input', (e) => { S.letter = e.target.value.split('\n').slice(0, 3).join('\n'); drawLettering(); });
+$('undo').onclick = () => { if (!S.parts.length) return; S.parts.pop(); deco.remove(deco.children[deco.children.length - 1]); };
+$('finish').onclick = () => { saveHash(); openCake(); };
+$('write').onclick = () => { $('msg').value = ''; $('writeSheet').hidden = false; $('msg').focus(); };
+$('wNo').onclick = () => { $('writeSheet').hidden = true; };
+$('wOk').onclick = async () => {
+  const text = $('msg').value.trim(); if (!text) return toast('한마디 써 줘!');
+  const n = { from: $('from').value.trim() || '익명', text, c: PAPERS[S.paper] };
+  S.notes.push(n); $('writeSheet').hidden = true; saveHash(); setTitle();
+  await addNote3d(n, true);
+  toast('케이크 속에 쏙! 촛불을 끄면 열려요 🤫');
+};
+$('rClose').onclick = () => { $('readSheet').hidden = true; };
+$('mic').onclick = startMic;
+const hold = (on) => () => { S.forced = on ? 0.9 : 0; };
+$('tap').addEventListener('pointerdown', hold(true)); $('tap').addEventListener('pointerup', hold(false)); $('tap').addEventListener('pointerleave', hold(false));
+$('pass').onclick = $('pass2').onclick = pass;
+$('relight').onclick = () => openCake();
+$('mine').onclick = () => {
+  history.replaceState(null, '', location.pathname); S.notes = []; S.parts = []; S.letter = ''; clearNotes(); deco.clear();
+  candles.forEach((c) => cake.remove(c.g)); candles = []; conf.visible = false; $('nm').value = ''; $('ag').value = '';
+  $('title').textContent = '누구의 생일이야?'; $('hint').textContent = '이름·나이를 넣고 케이크를 꾸며 봐'; $('count').hidden = true; camGoal = TO; show('setup');
+};
+
+// 누르기: 꾸미기 중엔 토핑 붙이기, 아니면 쪽지 읽기 (드래그로 돌린 건 무시)
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let down = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
+  ptr.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ptr, camera);
+  if (S.mode === 'deco') { const hit = ray.intersectObject(topDisk)[0]; if (hit) { const p = cake.worldToLocal(hit.point.clone()); placePart(p.x, p.z); } return; }
+  const hit = ray.intersectObjects(notes3d.filter((m) => m.visible))[0]; if (!hit) return;
+  const n = hit.object.userData.n; $('rText').textContent = n.text; $('rFrom').textContent = `from. ${n.from}`; $('readSheet').hidden = false;
+});
+
+// 링크로 열면 꾸민 케이크 + 숨은 쪽지 그대로
+paintCake();
+try {
+  const d = new URLSearchParams(location.hash.slice(1)).get('d');
+  if (d) {
+    const o = dec(d);
+    S.name = String(o.n || '친구').slice(0, 8); S.age = +o.a || 1; S.flavor = FLAVORS[o.f] ? o.f : 'pink'; S.ink = INKS.includes(o.i) ? o.i : INKS[0];
+    S.letter = String(o.l || '').slice(0, 30);
+    S.parts = (o.p || []).slice(0, MAX_PARTS).filter(([t]) => PARTS[t]).map(([t, x, z]) => ({ t, x: +x || 0, z: +z || 0 }));
+    S.notes = (o.m || []).slice(0, 40).map(([from, text, c]) => ({ from: String(from).slice(0, 8), text: String(text).slice(0, 80), c: PAPERS.includes(c) ? c : PAPERS[0] }));
+    rebuildParts(); S.notes.forEach((n) => addNote3d(n, false)); openCake();
+  }
+} catch { toast('링크가 깨졌어요. 새로 만들어 주세요'); }
+
+if (CAPTURE) {
+  window.__step = (dt = 1 / 30) => step(dt);
+  window.__blow = (v) => { S.forced = v; };
+  window.__setup = (name, age, flavor) => { $('nm').value = name; $('ag').value = String(age); S.flavor = flavor; paintCake(); };
+  window.__next = () => $('next').click();
+  window.__letter = (text, ink) => { $('letter').value = text; S.letter = text; if (ink) S.ink = ink; drawLettering(); };
+  window.__part = (t, x, z) => { S.sel = t; placePart(x, z); };
+  window.__finish = () => $('finish').click();
+  window.__note = (from, text, c) => { const n = { from, text, c }; S.notes.push(n); setTitle(); return addNote3d(n, true); };
+  window.__ready = true;
+} else {
+  let last = performance.now();
+  renderer.setAnimationLoop((now) => { const dt = Math.min(0.05, (now - last) / 1000); last = now; step(dt); });
+}
+</script>
+</body>
+</html>
