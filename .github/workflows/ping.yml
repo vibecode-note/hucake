@@ -1,0 +1,22 @@
+# Supabase 무료 프로젝트가 접속이 없어 멈추지 않게 하루 한 번 깨운다. 주소·키는 index.html에서 읽는다.
+name: ping
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+permissions:
+  actions: write
+  contents: read
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          URL=$(sed -n "s/.*DB_URL = '\([^']*\)'.*/\1/p" index.html)
+          KEY=$(sed -n "s/.*DB_KEY = '\([^']*\)'.*/\1/p" index.html)
+          curl -fsS "$URL/rest/v1/rpc/get_cake" -H "apikey: $KEY" -H 'Content-Type: application/json' -d '{"p_id":"ping"}'
+      # 저장소에 활동이 없으면 GitHub가 예약 실행을 끄기 때문에 스스로 다시 켠다
+      - run: gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/ping.yml/enable"
+        env:
+          GH_TOKEN: ${{ github.token }}

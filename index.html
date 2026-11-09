@@ -56,6 +56,16 @@ button, input, textarea { font: inherit; color: inherit; }
 .card h2 { margin: 0; font-family: 'Jua', sans-serif; font-weight: 400; font-size: 22px; }
 .note-read { font-family: 'Gowun Dodum', sans-serif; font-size: 20px; line-height: 1.6; white-space: pre-wrap; word-break: keep-all; min-height: 80px; }
 .from { font-family: 'Jua', sans-serif; font-size: 18px; text-align: right; opacity: .9; }
+.card > .pill, .dock > .pill { flex: none; } /* 세로 배치에서 flex:1이면 버튼 높이가 눌린다 */
+.paper button { white-space: nowrap; }
+.check { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: #FF7FA8; }
+.card.wide { width: min(94vw, 560px); max-height: calc(100dvh - 40px); }
+.wall { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; columns: 150px 2; column-gap: 10px; }
+.paper { break-inside: avoid; margin: 0 0 10px; padding: 14px; border-radius: 16px; color: #4A3B5C; font-family: 'Gowun Dodum', sans-serif; font-size: 16px; line-height: 1.5; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; }
+.paper .who { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 8px; font-family: 'Jua', sans-serif; color: #7A5C8F; }
+.paper button { border: 0; background: none; color: #7A5C8F; font-size: 13px; padding: 2px; cursor: pointer; text-decoration: underline; }
+.empty { text-align: center; color: var(--sub); padding: 24px 0; }
 .toast { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%); padding: 12px 18px; font-size: 14px; font-weight: 700; opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap; }
 .toast.on { opacity: 1; }
 </style>
@@ -93,23 +103,27 @@ button, input, textarea { font: inherit; color: inherit; }
 <section class="glass dock" id="play" hidden>
   <div class="meter" aria-hidden="true"><i id="lvl"></i></div>
   <div class="row"><button class="pill" id="write">✍️ 롤링페이퍼 쓰기</button><button class="pill main" id="mic">🎤 후~ 불기</button></div>
-  <div class="row" style="justify-content:space-between">
+  <div class="row" style="justify-content:center;flex-wrap:wrap;gap:2px 14px">
     <button class="small" id="tap">마이크가 안 되면 여기를 꾹</button>
-    <button class="small" id="pass">🔗 다음 친구에게 넘기기</button>
+    <button class="small" id="all">💌 모아 보기</button>
+    <button class="small" id="pass">🔗 링크 보내기</button>
+    <button class="small" id="gift" hidden>🎁 주인공 링크</button>
   </div>
 </section>
 
 <section class="glass dock" id="done" hidden>
-  <button class="pill main" id="pass2">🔗 이 케이크 보내기</button>
-  <div class="row"><button class="pill" id="relight">🕯️ 다시 켜기</button><button class="pill" id="mine">🎂 나도 만들기</button></div>
+  <button class="pill main" id="all2">💌 쪽지 모아 보기</button>
+  <div class="row"><button class="pill" id="pass2">🔗 링크 보내기</button><button class="pill" id="relight">🕯️ 다시 켜기</button></div>
+  <button class="small" id="mine">🎂 나도 만들기</button>
 </section>
 
 <div class="sheet" id="writeSheet" hidden>
   <div class="glass card">
     <h2>✍️ 롤링페이퍼 숨기기</h2>
-    <textarea class="field" id="msg" rows="4" maxlength="80" placeholder="생일 축하 한마디 (80자)&#10;촛불을 끄면 열려요 🤫" aria-label="축하 메시지"></textarea>
+    <textarea class="field" id="msg" rows="4" maxlength="80" placeholder="생일 축하 한마디&#10;촛불을 끄면 열려요 🤫" aria-label="축하 메시지"></textarea>
     <div class="row"><input class="field" id="from" maxlength="8" placeholder="보내는 사람" aria-label="보내는 사람"></div>
     <div class="chips" id="papers" role="group" aria-label="쪽지 색"></div>
+    <label class="check" id="secretRow" hidden><input type="checkbox" id="secret"> 🔒 주인공만 보기</label>
     <div class="row"><button class="pill" id="wNo">취소</button><button class="pill main" id="wOk">케이크에 쏙</button></div>
   </div>
 </div>
@@ -118,6 +132,24 @@ button, input, textarea { font: inherit; color: inherit; }
     <div class="note-read" id="rText"></div>
     <div class="from" id="rFrom"></div>
     <button class="pill" id="rClose">닫기</button>
+  </div>
+</div>
+<div class="sheet" id="allSheet" hidden>
+  <div class="glass card wide">
+    <h2 id="allTitle"></h2>
+    <div class="wall" id="wall"></div>
+    <button class="pill" id="allClose">닫기</button>
+  </div>
+</div>
+<div class="sheet" id="linkSheet" hidden>
+  <div class="glass card">
+    <h2>🎉 케이크 완성! 링크는 두 개예요</h2>
+    <button class="pill main" id="lFriend">💌 친구용 링크 보내기</button>
+    <p class="hint">단톡방에 올리면 친구들이 쪽지를 남겨요.</p>
+    <button class="pill" id="lOwner">🎁 주인공 전용 링크 보내기</button>
+    <p class="hint">생일날 주인공에게만 보내 주세요. 비밀 쪽지까지 열리는 링크예요.</p>
+    <input class="field" id="lUrl" readonly hidden aria-label="복사할 링크">
+    <button class="small" id="lClose">닫기</button>
   </div>
 </div>
 <div class="glass toast" id="toast" role="status"></div>
@@ -156,9 +188,25 @@ const dec = (s) => JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(s.re
 const josa = (n) => (/[가-힣]$/.test(n) && (n.charCodeAt(n.length - 1) - 0xAC00) % 28 ? '아' : '야');
 const r2 = (v) => Math.round(v * 100) / 100;
 const defaultLetter = () => `${S.name}${josa(S.name)}\n생일 축하해 ♡`;
-function saveHash() {
-  history.replaceState(null, '', '#d=' + enc({ n: S.name, a: S.age, s: S.shape, f: S.flavor, i: S.ink, l: S.letter, p: S.parts.map((p) => [p.t, r2(p.x), r2(p.z)]), m: S.notes.map((x) => [x.from, x.text, x.c]) }));
+const cakeData = () => ({ n: S.name, a: S.age, s: S.shape, f: S.flavor, i: S.ink, l: S.letter, p: S.parts.map((p) => [p.t, r2(p.x), r2(p.z)]) });
+function saveHash() { // 예전 방식(#d=) 링크 전용. 서버 케이크는 주소에 쪽지를 담지 않는다
+  history.replaceState(null, '', '#d=' + enc({ ...cakeData(), m: S.notes.map((x) => [x.from, x.text, x.c]) }));
 }
+
+// ---------- 쪽지 저장소 (Supabase, 설정은 setup.sql) ----------
+const DB_URL = 'https://bbbikxyjdcoxbnusehrb.supabase.co';
+const DB_KEY = 'sb_publishable_BlYF9_mIebs_J3mJ6SHcxw_GB_esE_y'; // 공개용 키. 쓰기·읽기는 setup.sql의 함수로만 가능
+async function rpc(fn, args) {
+  const r = await fetch(`${DB_URL}/rest/v1/rpc/${fn}`, { method: 'POST', headers: { apikey: DB_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(args) });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+const LOCKED = '🔒 주인공만 읽을 수 있는 비밀 쪽지예요';
+const mapNotes = (list) => list.map((x) => ({ id: x.id, from: String(x.from).slice(0, 8), text: x.text == null ? null : String(x.text).slice(0, 200), c: PAPERS.includes(x.c) ? x.c : PAPERS[0], secret: !!x.secret }));
+const friendLink = () => `${location.origin}${location.pathname}#c=${S.cake}`;
+const ownerLink = () => `${friendLink()}&k=${S.maker}`;
+// 만든 사람이 전용 링크를 다시 꺼낼 수 있게 이 기기에만 기억해 둔다
+const makerStore = { get: (id) => { try { return localStorage.getItem('hucake:' + id); } catch { return null; } }, set: (id, k) => { try { localStorage.setItem('hucake:' + id, k); } catch {} } };
 
 // ---------- 렌더러·장면 ----------
 const renderer = new THREE.WebGLRenderer({ canvas: $('c'), antialias: true });
@@ -458,7 +506,7 @@ function noteTexture(n) {
   g.fillStyle = 'rgba(255,255,255,.55)'; g.save(); g.translate(160, 30); g.rotate(-0.06); g.fillRect(-52, -16, 104, 32); g.restore();
   g.fillStyle = '#4A3B5C'; g.textAlign = 'left'; g.textBaseline = 'top'; g.font = '30px "Gowun Dodum"';
   const lines = []; let cur = '';
-  for (const ch of n.text) { if (ch === '\n' || g.measureText(cur + ch).width > 236) { lines.push(cur); cur = ch === '\n' ? '' : ch; } else cur += ch; }
+  for (const ch of n.text ?? LOCKED) { if (ch === '\n' || g.measureText(cur + ch).width > 236) { lines.push(cur); cur = ch === '\n' ? '' : ch; } else cur += ch; }
   lines.push(cur);
   lines.slice(0, 6).forEach((l, i) => g.fillText(i === 5 && lines.length > 6 ? l.slice(0, -1) + '…' : l, 42, 74 + i * 42));
   g.textAlign = 'right'; g.font = '30px Jua'; g.fillStyle = '#7A5C8F'; g.fillText(`from. ${n.from}`, 278, 312);
@@ -479,6 +527,7 @@ async function addNote3d(n, fly) {
   const m = new THREE.Group(), mat = (t) => new THREE.MeshStandardMaterial({ map: t, transparent: true, roughness: 0.8, side: THREE.FrontSide });
   const front = new THREE.Mesh(noteGeo, mat(envelopeTexture(n))), back = new THREE.Mesh(noteGeo, mat(noteTexture(n)));
   back.rotation.y = Math.PI; m.add(front, back);
+  if (notes3d.length >= 40) return; // 3D는 40장까지, 전부는 모아 보기에서
   const i = notes3d.length;
   // 케이크 속에 숨어 있다가 촛불을 다 끄면 봉투로 튀어나와서 뒤집히며 열림
   m.userData = { n, a: i * 2.39996 + 0.9, y: 1.0 + (i % 3) * 0.75 + rnd() * 0.15, r: 2.45 + (i % 2) * 0.3, born: fly ? S.time : -9, wob: rnd() * 6, pop: S.revealed ? S.time - 3 : null };
@@ -561,6 +610,7 @@ function show(id) { S.mode = id; for (const k of ['setup', 'deco', 'play', 'done
 function setTitle() {
   $('title').textContent = `${S.name}${josa(S.name)}, 생일 축하해!`;
   $('count').hidden = false; $('count').textContent = `💌 케이크 속 롤링페이퍼 ${S.notes.length}장`;
+  $('gift').hidden = !S.maker; $('secretRow').hidden = !S.cake; $('msg').maxLength = S.cake ? 200 : 80;
 }
 function goDeco() {
   show('deco'); camGoal = DECO; lookGoal = LOOK_DECO;
@@ -571,7 +621,7 @@ function goDeco() {
 async function openCake() {
   bodyMat.color.set(FLAVORS[S.flavor]); drawLettering(); setTitle(); camGoal = TO; lookGoal = LOOK;
   S.revealed = false; notes3d.forEach((m) => { m.visible = false; m.userData.pop = null; m.userData.born = -9; });
-  $('hint').textContent = S.notes.length ? '촛불을 후~ 끄면 쪽지가 열려요 🤫' : '친구들한테 넘겨서 롤링페이퍼를 모아 봐!';
+  $('hint').textContent = S.notes.length ? '촛불을 후~ 끄면 쪽지가 열려요 🤫' : S.cake ? '친구들한테 링크를 보내서 쪽지를 모아 봐!' : '친구들한테 넘겨서 롤링페이퍼를 모아 봐!';
   await makeCandles(); S.lighting = 0; S.allOut = false; conf.visible = false;
   show('play');
 }
@@ -707,12 +757,44 @@ function step(dt) {
 
 // ---------- 버튼 ----------
 function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2200); }
-async function pass() {
-  saveHash();
-  const url = location.href;
-  const text = S.notes.length ? `${S.name} 생일 롤링페이퍼 💌 ${S.notes.length}장 모였어! 너도 한 장 숨기고 다음 사람한테 넘겨 줘` : `${S.name} 생일 케이크 🎂 롤링페이퍼 한 장 숨겨 줘!`;
+async function share(url, text) {
   try { if (navigator.share) { await navigator.share({ title: '후~ 케이크', text, url }); return; } } catch (e) { if (e.name === 'AbortError') return; }
-  try { await navigator.clipboard.writeText(`${text} ${url}`); toast('링크 복사 완료! 카톡에 붙여넣기 💌'); } catch { toast('공유가 안 되는 브라우저예요'); }
+  try { await navigator.clipboard.writeText(`${text} ${url}`); toast('링크 복사 완료! 카톡에 붙여넣기 💌'); }
+  catch { $('linkSheet').hidden = false; const u = $('lUrl'); u.hidden = false; u.value = url; u.select(); toast('공유가 막혀 있어요. 링크를 길게 눌러 복사해 주세요'); }
+}
+const friendText = () => `${S.name} 생일 롤링페이퍼 💌 한 장 남겨 줘! 주인공한테는 비밀이야 🤫`;
+async function pass() {
+  if (S.cake) return share(friendLink(), friendText());
+  saveHash();
+  return share(location.href, S.notes.length ? `${S.name} 생일 롤링페이퍼 💌 ${S.notes.length}장 모였어! 너도 한 장 숨기고 다음 사람한테 넘겨 줘` : `${S.name} 생일 케이크 🎂 롤링페이퍼 한 장 숨겨 줘!`);
+}
+function openLinks() { $('lUrl').hidden = true; $('lOwner').hidden = !S.maker; $('linkSheet').hidden = false; }
+async function refreshNotes() { // 다른 친구가 그사이 쓴 쪽지까지 다시 받아 온다
+  const r = await rpc('get_cake', { p_id: S.cake, p_key: S.ownerKey });
+  const before = S.notes.map((n) => n.id).join();
+  S.notes = mapNotes(r.notes); setTitle();
+  if (S.notes.map((n) => n.id).join() !== before) { clearNotes(); S.notes.forEach((n) => addNote3d(n, false)); }
+}
+function paperEl(n) { // 친구가 쓴 글은 textContent로만 넣는다
+  const el = document.createElement('div'); el.className = 'paper'; el.style.background = n.c;
+  el.append(n.text ?? LOCKED);
+  const who = document.createElement('div'); who.className = 'who'; who.textContent = `${n.secret ? '🔒 ' : ''}from. ${n.from}`;
+  if (S.ownerKey && n.id != null) {
+    const del = document.createElement('button'); del.textContent = '지우기';
+    del.onclick = async () => {
+      if (!confirm('이 쪽지를 지울까요? 되돌릴 수 없어요.')) return;
+      try { await rpc('delete_note', { p_id: S.cake, p_key: S.ownerKey, p_note: n.id }); await openAll(); } catch { toast('지우지 못했어요. 다시 해 주세요'); }
+    };
+    who.append(del);
+  }
+  el.append(who); return el;
+}
+async function openAll() {
+  if (S.cake) try { await refreshNotes(); } catch { toast('최신 쪽지를 불러오지 못했어요'); }
+  $('allTitle').textContent = `💌 ${S.name}에게 온 쪽지 ${S.notes.length}장`;
+  if (S.notes.length) $('wall').replaceChildren(...S.notes.map(paperEl));
+  else { const e = document.createElement('p'); e.className = 'empty'; e.textContent = '아직 쪽지가 없어요'; $('wall').replaceChildren(e); }
+  $('allSheet').hidden = false;
 }
 $('next').onclick = () => {
   S.name = $('nm').value.trim() || '친구'; S.age = Math.max(1, Math.min(99, parseInt($('ag').value, 10) || 1));
@@ -720,13 +802,29 @@ $('next').onclick = () => {
 };
 $('letter').addEventListener('input', (e) => { S.letter = e.target.value.split('\n').slice(0, 3).join('\n'); drawLettering(); });
 $('undo').onclick = () => { if (!S.parts.length) return; S.parts.pop(); deco.remove(deco.children[deco.children.length - 1]); };
-$('finish').onclick = () => { saveHash(); openCake(); };
-$('write').onclick = () => { $('msg').value = ''; $('writeSheet').hidden = false; $('msg').focus(); };
+$('finish').onclick = async () => {
+  if (CAPTURE) { saveHash(); return openCake(); } // 영상 녹화는 서버 없이
+  $('finish').disabled = true;
+  try {
+    const r = await rpc('create_cake', { p_data: cakeData() });
+    S.cake = r.id; S.maker = r.key; makerStore.set(r.id, r.key);
+    history.replaceState(null, '', '#c=' + r.id); // 전용 키는 주소창에 남기지 않는다
+    await openCake(); openLinks();
+  } catch { toast('저장에 실패했어요. 다시 눌러 주세요'); }
+  $('finish').disabled = false;
+};
+$('write').onclick = () => { $('msg').value = ''; $('secret').checked = false; $('writeSheet').hidden = false; $('msg').focus(); };
 $('wNo').onclick = () => { $('writeSheet').hidden = true; };
 $('wOk').onclick = async () => {
   const text = $('msg').value.trim(); if (!text) return toast('한마디 써 줘!');
-  const n = { from: $('from').value.trim() || '익명', text, c: PAPERS[S.paper] };
-  S.notes.push(n); $('writeSheet').hidden = true; saveHash(); setTitle();
+  const n = { from: $('from').value.trim() || '익명', text, c: PAPERS[S.paper], secret: !!S.cake && $('secret').checked };
+  if (S.cake) { // 저장에 실패하면 쓴 글이 날아가지 않게 창을 닫지 않는다
+    $('wOk').disabled = true;
+    try { n.id = await rpc('add_note', { p_id: S.cake, p_from: n.from, p_text: text, p_color: n.c, p_secret: n.secret }); }
+    catch (e) { toast(e.message.includes('cake_full') ? '쪽지가 200장으로 가득 찼어요' : '저장에 실패했어요. 다시 눌러 주세요'); return; }
+    finally { $('wOk').disabled = false; }
+  }
+  S.notes.push(n); $('writeSheet').hidden = true; if (!S.cake) saveHash(); setTitle();
   await addNote3d(n, true);
   toast('케이크 속에 쏙! 촛불을 끄면 열려요 🤫');
 };
@@ -735,9 +833,15 @@ $('mic').onclick = startMic;
 const hold = (on) => () => { S.forced = on ? 0.9 : 0; if (on) ac = ac || new AudioContext(); };
 $('tap').addEventListener('pointerdown', hold(true)); $('tap').addEventListener('pointerup', hold(false)); $('tap').addEventListener('pointerleave', hold(false));
 $('pass').onclick = $('pass2').onclick = pass;
+$('all').onclick = $('all2').onclick = openAll;
+$('allClose').onclick = () => { $('allSheet').hidden = true; };
+$('gift').onclick = openLinks;
+$('lFriend').onclick = pass;
+$('lOwner').onclick = () => share(ownerLink(), `${S.name}${josa(S.name)}, 생일 축하해! 🎂 친구들이 쪽지를 숨겨 놨어. 촛불을 후~ 불어 봐`);
+$('lClose').onclick = () => { $('linkSheet').hidden = true; };
 $('relight').onclick = () => openCake();
 $('mine').onclick = () => {
-  history.replaceState(null, '', location.pathname); S.notes = []; S.parts = []; S.letter = ''; clearNotes(); deco.clear();
+  history.replaceState(null, '', location.pathname); S.cake = null; S.maker = null; S.ownerKey = null; S.notes = []; S.parts = []; S.letter = ''; clearNotes(); deco.clear();
   candles.forEach((c) => cake.remove(c.g)); candles = []; conf.visible = false; $('nm').value = ''; $('ag').value = '';
   $('title').textContent = '누구의 생일이야?'; $('hint').textContent = '이름·나이를 넣고 케이크를 꾸며 봐'; $('count').hidden = true; camGoal = TO; lookGoal = LOOK; show('setup');
 };
@@ -750,20 +854,31 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   ptr.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ptr, camera);
   if (S.mode === 'deco') { const hit = ray.intersectObject(topDisk)[0]; if (hit) { const p = cake.worldToLocal(hit.point.clone()); placePart(p.x, p.z); } return; }
   const hit = ray.intersectObjects(notes3d.filter((m) => m.visible), true)[0]; if (!hit) return;
-  const n = hit.object.parent.userData.n; $('rText').textContent = n.text; $('rFrom').textContent = `from. ${n.from}`; $('readSheet').hidden = false;
+  const n = hit.object.parent.userData.n; $('rText').textContent = n.text ?? LOCKED; $('rFrom').textContent = `from. ${n.from}`; $('readSheet').hidden = false;
 });
 
-// 링크로 열면 꾸민 케이크 + 숨은 쪽지 그대로
+// 링크로 열면 꾸민 케이크 + 숨은 쪽지 그대로 (#c=서버 케이크, #d=예전 링크)
+function applyCake(o) {
+  S.name = String(o.n || '친구').slice(0, 8); S.age = +o.a || 1; S.shape = o.s === 'round' ? 'round' : 'heart';
+  S.flavor = FLAVORS[o.f] ? o.f : 'pink'; S.ink = INKS.includes(o.i) ? o.i : INKS[0]; S.letter = String(o.l || '').slice(0, 30);
+  S.parts = (o.p || []).slice(0, MAX_PARTS).filter(([t]) => PARTS[t]).map(([t, x, z]) => ({ t, x: +x || 0, z: +z || 0 }));
+}
+const HASH = new URLSearchParams(location.hash.slice(1));
 try {
-  const d = new URLSearchParams(location.hash.slice(1)).get('d');
-  if (d) {
-    const o = dec(d);
-    S.name = String(o.n || '친구').slice(0, 8); S.age = +o.a || 1; S.shape = o.s === 'round' ? 'round' : 'heart';
-    S.flavor = FLAVORS[o.f] ? o.f : 'pink'; S.ink = INKS.includes(o.i) ? o.i : INKS[0]; S.letter = String(o.l || '').slice(0, 30);
-    S.parts = (o.p || []).slice(0, MAX_PARTS).filter(([t]) => PARTS[t]).map(([t, x, z]) => ({ t, x: +x || 0, z: +z || 0 }));
+  const c = HASH.get('c'), d = HASH.get('d');
+  if (c) {
+    $('setup').hidden = true; $('title').textContent = '케이크 불러오는 중…'; $('hint').textContent = '';
+    const r = await rpc('get_cake', { p_id: c, p_key: HASH.get('k') });
+    if (!r) throw new Error('not found');
+    applyCake(r.data); S.cake = c; S.ownerKey = r.owner ? HASH.get('k') : null; S.maker = makerStore.get(c); S.notes = mapNotes(r.notes);
+  } else if (d) {
+    const o = dec(d); applyCake(o);
     S.notes = (o.m || []).slice(0, 40).map(([from, text, c]) => ({ from: String(from).slice(0, 8), text: String(text).slice(0, 80), c: PAPERS.includes(c) ? c : PAPERS[0] }));
   }
-} catch { toast('링크가 깨졌어요. 새로 만들어 주세요'); }
+} catch {
+  $('setup').hidden = false; $('title').textContent = '누구의 생일이야?'; $('hint').textContent = '이름·나이를 넣고 케이크를 꾸며 봐';
+  toast('케이크를 불러오지 못했어요. 링크를 확인해 주세요');
+}
 buildCake();
 if (S.name) { $('shapes').querySelectorAll('[data-s]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.s === S.shape)); S.notes.forEach((n) => addNote3d(n, false)); openCake(); }
 
